@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ADK Agent WebRTC Demo</title>
+</head>
+<body>
+<h1>Talk to Marketing Agent</h1>
+<button id="startBtn">Start Call</button>
+<audio id="agentAudio" autoplay></audio>
+
+<script>
+const startBtn = document.getElementById("startBtn");
+const audioElem = document.getElementById("agentAudio");
+
+startBtn.onclick = async () => {
+    const pc = new RTCPeerConnection();
+
+    // Get mic
+    const stream = await navigator.mediaDevices.getUserMedia({audio: true});
+    stream.getTracks().forEach(track => pc.addTrack(track, stream));
+
+    // Create audio element to play remote audio
+    pc.ontrack = (event) => {
+        audioElem.srcObject = event.streams[0];
+    };
+
+    // Create offer
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+
+    // Send to server
+    const res = await fetch("/offer", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({sdp: offer.sdp, type: offer.type})
+    });
+    const answer = await res.json();
+    await pc.setRemoteDescription(answer);
+};
+</script>
+</body>
+</html>
