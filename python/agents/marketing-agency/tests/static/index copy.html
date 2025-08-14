@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Voice Agent Test</title>
+</head>
+<body>
+<h1>Speak to the Agent</h1>
+<button onclick="start()">Start</button>
+<script>
+let pc;
+async function start() {
+    pc = new RTCPeerConnection();
+    const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+    stream.getTracks().forEach(track => pc.addTrack(track, stream));
+
+    pc.ontrack = e => {
+        const audio = document.createElement("audio");
+        audio.srcObject = e.streams[0];
+        audio.autoplay = true;
+        document.body.appendChild(audio);
+    };
+
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+
+    const resp = await fetch("/offer", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({sdp: offer.sdp, type: offer.type})
+    });
+    const answer = await resp.json();
+    await pc.setRemoteDescription(answer);
+}
+</script>
+</body>
+</html>
